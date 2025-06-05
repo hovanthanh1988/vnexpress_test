@@ -7,7 +7,7 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
 
     steps:
     - name: Checkout code
@@ -18,39 +18,41 @@ jobs:
       with:
         python-version: '3.10'
 
-    - name: Install dependencies
+    - name: Install Chocolatey
       run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
+        Set-ExecutionPolicy Bypass -Scope Process -Force
+        [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+        iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
 
     - name: Install Chrome
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y wget unzip
-        wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-        sudo apt install -y ./google-chrome-stable_current_amd64.deb
+      run: choco install googlechrome -y
 
     - name: Extract Chrome Version
       run: |
-        CHROME_VERSION=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+')
-        if [ -z "$CHROME_VERSION" ]; then
-          echo "Failed to extract Chrome version. Ensure Google Chrome is installed."
+        $chromePath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\chrome.exe"
+        $chromeVersion = (Get-ItemProperty -Path $chromePath).'(default)' | ForEach-Object {
+            (Get-Item $_).VersionInfo.ProductVersion
+        }
+        if (-not $chromeVersion) {
+          Write-Host "Failed to extract Chrome version. Ensure Google Chrome is installed."
           exit 1
-        fi
-        echo "Chrome version: $CHROME_VERSION"
+        }
+        Write-Host "Chrome version: $chromeVersion"
 
     - name: Install ChromeDriver
       run: |
-        CHROME_VERSION=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+')
-        DRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_VERSION")
-        if [ -z "$DRIVER_VERSION" ]; then
-          echo "Failed to fetch ChromeDriver version for Chrome version $CHROME_VERSION."
+        $chromeVersion = (Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\chrome.exe").'(default)' | ForEach-Object {
+            (Get-Item $_).VersionInfo.ProductVersion
+        }
+        $driverVersion = Invoke-RestMethod -Uri "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$chromeVersion"
+        if (-not $driverVersion) {
+          Write-Host "Failed to fetch ChromeDriver version for Chrome version $chromeVersion."
           exit 1
-        fi
-        wget -N https://chromedriver.storage.googleapis.com/$DRIVER_VERSION/chromedriver_linux64.zip
-        unzip chromedriver_linux64.zip
-        chmod +x chromedriver
-        sudo mv -f chromedriver /usr/local/bin/chromedriver
+        }
+        Write-Host "ChromeDriver version: $driverVersion"
+        Invoke-WebRequest -Uri "https://chromedriver.storage.googleapis.com/$driverVersion/chromedriver_win32.zip" -OutFile "chromedriver.zip"
+        Expand-Archive -Path "chromedriver.zip" -DestinationPath "."
+        Move-Item -Path ".\chromedriver.exe" -Destination "C:\Windows\System32"
 
     - name: Run tests
       run: pytest Testcases/ --html=reports/report.html --self-contained-html
