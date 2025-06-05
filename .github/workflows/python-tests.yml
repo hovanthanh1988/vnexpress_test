@@ -23,18 +23,30 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
-    - name: Install Chrome & Driver
+    - name: Install Chrome
       run: |
         sudo apt-get update
         sudo apt-get install -y wget unzip
         wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
         sudo apt install -y ./google-chrome-stable_current_amd64.deb
-        CHROME_VERSION=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+\.\d+')    
+
+    - name: Extract Chrome Version
+      run: |
+        CHROME_VERSION=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+')
+        if [ -z "$CHROME_VERSION" ]; then
+          echo "Failed to extract Chrome version. Ensure Google Chrome is installed."
+          exit 1
+        fi
+        echo "Chrome version: $CHROME_VERSION"
 
     - name: Install ChromeDriver
       run: |
         CHROME_VERSION=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+')
         DRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_VERSION")
+        if [ -z "$DRIVER_VERSION" ]; then
+          echo "Failed to fetch ChromeDriver version for Chrome version $CHROME_VERSION."
+          exit 1
+        fi
         wget -N https://chromedriver.storage.googleapis.com/$DRIVER_VERSION/chromedriver_linux64.zip
         unzip chromedriver_linux64.zip
         chmod +x chromedriver
@@ -47,4 +59,4 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: test-report
-        path: report.html
+        path: reports/report.html
