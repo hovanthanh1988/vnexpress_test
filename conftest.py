@@ -18,7 +18,7 @@ def setup(request):
     chrome_options.add_argument(f"--user-data-dir={tempfile.mkdtemp()}")  # Unique temp profile
 
     service = Service(ChromeDriverManager().install())
-    driver = webdriver.Chrome(options=chrome_options, service=service)
+    driver = webdriver.Chrome(service=service)
     driver.maximize_window()
     request.cls.driver = driver
     yield
