@@ -13,12 +13,6 @@ driver = None
 @pytest.fixture(scope="function")
 def setup(request):
     browser = request.config.getoption("--browser")
-    chrome_options = Options()
-    #chrome_options.add_argument("--headless")  # Run in headless mode
-    chrome_options.add_argument("--no-sandbox")  # Needed for CI
-    chrome_options.add_argument("--disable-dev-shm-usage")  # Overcome limited resource problems
-    chrome_options.add_argument("--disable-gpu")  # Disable GPU acceleration (safe)
-
 
     if browser == "chrome":
         service = Service(ChromeDriverManager().install())
