@@ -13,6 +13,7 @@ class TestLogin():
         excel_instance = excel.Excel(file_path, "url")
         url = excel_instance.read_excel()[0][0]
         self.driver.get(url)
+        print("test")
         assert True, "This is a placeholder test to ensure pytest runs correctly."
 
     def test_list(self):
